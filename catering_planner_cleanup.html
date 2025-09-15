@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catering & Voorraad Planner</title>
+  <style>
+    :root { --bg:#0b1220; --card:#121b2d; --ink:#e7ecf7; --muted:#9fb0d0; --accent:#5bb0ff; --red:#ff6b6b; --yellow:#ffd166; --ink-dim:#c9d7f2; --rowh:42px; }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif}
+    h1{font-size:1.4rem;margin:0 0 .5rem}
+    header{display:flex;gap:1rem;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #22314f;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+    .brand{display:flex;gap:.6rem;align-items:center}
+    .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px var(--accent)}
+    .wrap{max-width:1400px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border:1px solid #22314f;border-radius:16px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+    .card h2{font-size:1.1rem;margin:.1rem 0 .8rem;color:#dbe8ff}
+    .subtle{color:var(--muted);font-size:.9rem}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #1e2a44;height:var(--rowh);vertical-align:middle}
+    th{color:#cfe0ff;text-align:left}
+    td.actions{display:flex;gap:6px}
+    td.num{text-align:right}
+    input,select,button,textarea{background:#0e1628;color:var(--ink);border:1px solid #22314f;border-radius:10px;padding:8px;height:34px;box-sizing:border-box}
+    input[type="number"]{width:90px}
+    textarea{width:100%;min-height:48px}
+    .btn{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;line-height:1;padding:0 8px}
+    .btn.danger{background:#2a0f15;border-color:#4e1e27}
+    .btn:focus{outline:2px solid #5bb0ff}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border:1px solid #22314f;border-radius:999px}
+    .pill.alert{background:#2a0f15;border-color:#4e1e27;color:#ffdada}
+    .badge{display:inline-block;padding:2px 6px;border-radius:999px;border:1px solid #345082;color:#a7c4ff;background:#0f1a30;margin-left:6px;font-size:.75rem}
+    .empty{display:none;color:var(--muted);padding:6px 0}
+    footer{padding:12px 16px;color:var(--muted);font-size:.9rem;text-align:center}
+
+    /* Grids */
+    .topgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .sidegrid{display:grid;grid-template-rows:auto minmax(380px,1fr);gap:16px}
+    .bottomgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:1100px){ .topgrid,.bottomgrid{grid-template-columns:1fr} .sidegrid{grid-template-rows:auto auto} }
+
+    /* Kalender */
+    .cal-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .cal-btn{padding:6px 10px;cursor:pointer;border-radius:10px;border:1px solid #22314f;background:#0e1628;color:var(--ink)}
+    .cal-legend{margin-left:auto;color:#c7d6f4;font-size:.85rem}
+    .cal-head-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:4px}
+    .cal-head{color:#aecdff;text-align:center;font-size:.85rem}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .cal-day{position:relative;border:1px solid #22314f;border-radius:10px;min-height:62px;padding:6px;display:flex;flex-direction:column;justify-content:space-between;transition:box-shadow .15s,border-color .15s}
+    .cal-day.muted{opacity:.45}
+    .cal-day.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(91,176,255,.35) inset}
+    .cal-num{font-size:.9rem;color:#cfe0ff}
+    .cal-small{font-size:.8rem;color:#a8b9d7}
+    .cal-badge{position:absolute;top:6px;right:8px;font-size:.95rem}
+    .heat0{background:#101a31}
+    .heat1{background:#13203a}
+    .heat2{background:#162746}
+    .heat3{background:#193155}
+    .heat4{background:#1c3a64}
+
+    /* Voorraadstatus visuals */
+    tr.row.low  td{background:linear-gradient(90deg, rgba(255,107,107,.18), transparent)}
+    tr.row.near td{background:linear-gradient(90deg, rgba(255,209,102,.18), transparent)}
+
+    /* Tijdlijn */
+    .timeline{display:flex;flex-direction:column;gap:8px}
+    .t-item{display:flex;gap:10px;align-items:center;border:1px solid #22314f;background:#0e1628;border-radius:12px;padding:8px 10px}
+    .t-time{width:70px;font-variant-numeric:tabular-nums;color:#cfe0ff}
+    .t-body{flex:1}
+    .t-name{font-weight:600}
+    .t-note{color:#9fb0d0;font-size:.9rem}
+    .t-status{font-size:1.1rem}
+
+    /* Inventory two-column grid */
+    .inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:1100px){ .inv-grid{grid-template-columns:1fr} }
+  
+    /* Prep mode calendar selection */
+    
+  
+    /* Collapsible prep card tweaks */
+    #prep-card summary::-webkit-details-marker{display:none}
+    #prep-card summary{user-select:none}
+
+  
+    /* Hapjes breakdown styling */
+    .hap-group{margin:8px 0 12px; padding:8px 10px; border:1px solid #22314f; border-radius:10px; background:#0e1628}
+    .hap-title{font-weight:600; color:#dbe8ff; margin-bottom:6px}
+    .hap-items{margin:0; padding-left:18px}
+    .hap-items li{margin:2px 0}
+
+
+    /* Error banner */
+    #error-banner {display:none; background:#2a0f15; color:#ffdada; padding:10px; margin:10px 0; border:1px solid #4e1e27; border-radius:8px; white-space:pre-wrap;}
+
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="dot"></div><h1>Catering & Voorraad Planner</h1></div>
+  <div class="toolbar">
+    <label class="pill">Export JSON <button id="btn-export" class="btn">⬇</button></label>
+    <label class="pill">Import JSON <input type="file" id="btn-import" accept="application/json"></label>
+    <button id="btn-reset" class="btn">Reset</button>
+  </div>
+</header>
+
+<div id="error-banner"></div>
+<div class="wrap">
+  <!-- BOVENSTE RIJ: LINKS DAGOVERZICHT — RECHTS DETAILS + KALENDER -->
+  <div class="topgrid">
+    <!-- Linkerhelft: Dagoverzicht (gekoppeld aan geselecteerde dag) -->
+    <section class="card" id="dash-day">
+      <div class="toolbar" style="justify-content:space-between">
+        <h2>Dagoverzicht — <span id="selected-label"></span></h2>
+        <div class="toolbar">
+          <div class="pill">Formules: <b id="sum-entries">0</b></div>
+          <div class="pill">Personen: <b id="sum-persons">0</b></div>
+          <div class="pill" id="sum-flutes">Flutjes: 0/300</div>
+          <div class="pill" id="sum-wine">Wijnglazen: 0/80</div>
+          <div class="pill" id="sum-beer">Bierglazen: 0/216</div>
+          <div class="pill" id="sum-plates">Kleine bordjes: 0/24</div>
+          <div class="pill" id="sum-low">Lage glazen: 0/24</div>
+          <button class="btn" id="btn-goto-inventory">Ga naar voorraad ↓</button>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <h3>Tijdlijn</h3>
+          <div id="timeline" class="timeline"></div>
+        </div>
+        <div>
+          <h3>Benodigdheden (totaal voor geselecteerde dag)</h3>
+          <div id="hapjes-summary" class="subtle" style="margin:.5rem 0 .6rem"></div>
+          <table>
+            <thead><tr><th>Artikel</th><th>Benodigd</th><th>Eenheid</th><th>Voorraad/Cap.</th><th>Opmerking</th></tr></thead>
+            <tbody id="needs-selected"></tbody>
+          </table>
+
+          <h3>Hapjes (per soort — geselecteerde dag)</h3>
+          <div id="hapjes-breakdown" class="subtle"></div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Rechterhelft: boven Dagdetails, onder Kalender -->
+    <div class="sidegrid">
+      <section class="card" id="detail">
+        <h2>Dagdetails & planningen</h2>
+        <form id="add-plan-form" class="toolbar">
+          <label class="pill">Datum <input type="date" id="plan-date" required></label>
+          <select id="plan-time" aria-label="Serveertijd" required></select>
+          <select id="formula" required></select>
+          <input type="number" id="persons" min="1" step="1" placeholder="Personen" required>
+          <input id="notes" placeholder="Notitie (boot/tour/klant)">
+          <button class="btn" type="submit">Toevoegen</button>
+        </form>
+
+        <h3>Ingeplande formules</h3>
+        <table>
+          <thead><tr><th>Tijd</th><th>Formule</th><th>Pers.</th><th>Notitie</th><th></th></tr></thead>
+          <tbody id="entries-body"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Kalender (overzicht)</h2>
+        <div class="cal-wrap">
+          <button type="button" id="cal-prev" class="cal-btn">◀</button>
+          <div id="cal-label" style="min-width:180px"></div>
+          <button type="button" id="cal-next" class="cal-btn">▶</button>
+          <button type="button" id="cal-today" class="cal-btn">Vandaag</button>
+          <div class="cal-legend">heat = drukte · badge: 🔴 tekort · 🟡 bijna · ⚪ oké</div>
+        </div>
+        <div class="cal-head-row">
+          <div class="cal-head">Ma</div><div class="cal-head">Di</div><div class="cal-head">Wo</div>
+          <div class="cal-head">Do</div><div class="cal-head">Vr</div><div class="cal-head">Za</div><div class="cal-head">Zo</div>
+        </div>
+        <div id="cal-grid" class="cal-grid"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- VOORBEREIDINGSMODUS (permanent vak) -->
+  
+  <!-- VOORBEREIDINGSMODUS (collapsible) -->
+  <section class="card" id="prep-card" style="margin-top:16px">
+    <details id="prep-details">
+      <summary style="list-style:none; cursor:pointer">
+        <h2 style="display:inline">Voorbereidingsmodus — <span id="prep-range-label"></span></h2>
+        <span class="badge" style="margin-left:8px">open/close</span>
+      </summary>
+      <div class="toolbar" style="justify-content:space-between; align-items:center; margin-top:8px">
+        <div class="toolbar">
+          <label class="pill">Van <input type="date" id="prep-start"></label>
+          <label class="pill">Tot <input type="date" id="prep-end"></label>
+          <button class="btn" id="prep-apply">Toon overzicht</button>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px; margin-top:8px">
+        <div>
+          <h3>Drank (totaal over selectie)</h3>
+          <table><thead><tr><th>Artikel</th><th class="num">Totaal</th><th>Eenheid</th></tr></thead><tbody id="prep-drinks"></tbody></table>
+        </div>
+        <div>
+          <h3>Hapjes (aantal planken)</h3>
+          <table><thead><tr><th>Type</th><th class="num">Planken</th></tr></thead><tbody id="prep-hapjes"></tbody></table>
+        </div>
+      </div>
+    </details>
+  </section>
+
+
+  <!-- ONDERSTE RIJ: VOORRAAD LINKS — BOODSCHAPPEN RECHTS -->
+  <div class="bottomgrid" style="margin-top:16px">
+    <section class="card" id="inventory-section">
+      <div class="toolbar" style="justify-content:space-between; margin-bottom:8px">
+        <button class="btn" id="btn-goto-day">Ga naar dagoverzicht ↑</button>
+      </div>
+      <h2>Voorraadbeheer</h2>
+      <p class="subtle">Stock bijwerken. Drempels zijn vastgelegd in de code. (0 = op‑aanvraag)</p>
+
+      <div class="inv-grid">
+        <table>
+          <thead>
+            <tr><th>Artikel</th><th>Stock</th><th>Eenheid</th><th>Acties</th></tr>
+          </thead>
+          <tbody id="inv-body-a"></tbody>
+        </table>
+        <table>
+          <thead>
+            <tr><th>Artikel</th><th>Stock</th><th>Eenheid</th><th>Acties</th></tr>
+          </thead>
+          <tbody id="inv-body-b"></tbody>
+        </table>
+      </div>
+
+      <h3>Nieuw artikel</h3>
+      <form id="add-item-form" class="toolbar">
+        <input id="new-name" placeholder="Naam" required>
+        <input id="new-unit" placeholder="Eenheid (st, l, kg, g, fles, …)">
+        <input id="new-stock" type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="Stock">
+        <button class="btn" type="submit">Toevoegen</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Boodschappenlijstje</h2>
+      <p class="subtle">We tonen ook de harde deadline: <b>⏳ op tegen DD‑MM‑YYYY</b>.</p>
+      <div style="display:flex; gap:24px; flex-wrap:wrap">
+        <div style="flex:1; min-width:260px">
+          <h3>Nu onder grens</h3>
+          <ul id="shop-now"></ul>
+        </div>
+        <div style="flex:1; min-width:260px">
+          <h3>Binnenkort onder grens</h3>
+          <ul id="shop-soon"></ul>
+        </div>
+      </div>
+      <div id="shop-empty" class="empty">Nog niets op het lijstje. 🍀</div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Formules beheren</h2>
+    <p class="subtle">De formules staan in de broncode (CONFIG.formulas). Wil je ze live bekijken en kopiëren? Klik hieronder.</p>
+    <details>
+      <summary>Toon formule‑JSON</summary>
+      <pre id="formula-json" style="white-space:pre-wrap;background:#0e1628;padding:10px;border-radius:10px;border:1px solid #22314f;overflow:auto"></pre>
+    </details>
+    <p class="subtle">👉 Bubbels: 1 fles = 6 glazen. Alle bubbelformules tellen 1 flutje p.p. (herbruikbaar). Tijdselectie via kwartier-dropdown. Fruitsap: 1 kannetje/8p, we tonen <i>kannetjes</i> en boeken <i>dozen</i> af (↑ afronden).</p>
+  </section>
+</div>
+
+<footer>
+  Werkt volledig offline. Je data blijft lokaal in deze browser opgeslagen. — v3.2
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
