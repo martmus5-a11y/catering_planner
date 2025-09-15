@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catering & Voorraad Planner</title>
+  <style>
+    :root { --bg:#0b1220; --card:#121b2d; --ink:#e7ecf7; --muted:#9fb0d0; --accent:#5bb0ff; --red:#ff6b6b; --yellow:#ffd166; --ink-dim:#c9d7f2; --rowh:42px; }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif}
+    h1{font-size:1.4rem;margin:0 0 .5rem}
+    header{display:flex;gap:1rem;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #22314f;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+    .brand{display:flex;gap:.6rem;align-items:center}
+    .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px var(--accent)}
+    .wrap{max-width:1400px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border:1px solid #22314f;border-radius:16px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+    .card h2{font-size:1.1rem;margin:.1rem 0 .8rem;color:#dbe8ff}
+    .subtle{color:var(--muted);font-size:.9rem}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #1e2a44;height:var(--rowh);vertical-align:middle}
+    th{color:#cfe0ff;text-align:left}
+    td.actions{display:flex;gap:6px}
+    td.num{text-align:right}
+    input,select,button,textarea{background:#0e1628;color:var(--ink);border:1px solid #22314f;border-radius:10px;padding:8px;height:34px;box-sizing:border-box}
+    input[type="number"]{width:90px}
+    textarea{width:100%;min-height:48px}
+    .btn{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;line-height:1;padding:0 8px}
+    .btn.danger{background:#2a0f15;border-color:#4e1e27}
+    .btn:focus{outline:2px solid #5bb0ff}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border:1px solid #22314f;border-radius:999px}
+    .pill.alert{background:#2a0f15;border-color:#4e1e27;color:#ffdada}
+    .badge{display:inline-block;padding:2px 6px;border-radius:999px;border:1px solid #345082;color:#a7c4ff;background:#0f1a30;margin-left:6px;font-size:.75rem}
+    .empty{display:none;color:var(--muted);padding:6px 0}
+    footer{padding:12px 16px;color:var(--muted);font-size:.9rem;text-align:center}
+
+    /* Grids */
+    .topgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .sidegrid{display:grid;grid-template-rows:auto minmax(380px,1fr);gap:16px}
+    .bottomgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:1100px){ .topgrid,.bottomgrid{grid-template-columns:1fr} .sidegrid{grid-template-rows:auto auto} }
+
+    /* Kalender */
+    .cal-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .cal-btn{padding:6px 10px;cursor:pointer;border-radius:10px;border:1px solid #22314f;background:#0e1628;color:var(--ink)}
+    .cal-legend{margin-left:auto;color:#c7d6f4;font-size:.85rem}
+    .cal-head-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:4px}
+    .cal-head{color:#aecdff;text-align:center;font-size:.85rem}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .cal-day{position:relative;border:1px solid #22314f;border-radius:10px;min-height:62px;padding:6px;display:flex;flex-direction:column;justify-content:space-between;transition:box-shadow .15s,border-color .15s}
+    .cal-day.muted{opacity:.45}
+    .cal-day.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(91,176,255,.35) inset}
+    .cal-num{font-size:.9rem;color:#cfe0ff}
+    .cal-small{font-size:.8rem;color:#a8b9d7}
+    .cal-badge{position:absolute;top:6px;right:8px;font-size:.95rem}
+    .heat0{background:#101a31}
+    .heat1{background:#13203a}
+    .heat2{background:#162746}
+    .heat3{background:#193155}
+    .heat4{background:#1c3a64}
+
+    /* Voorraadstatus visuals */
+    tr.row.low  td{background:linear-gradient(90deg, rgba(255,107,107,.18), transparent)}
+    tr.row.near td{background:linear-gradient(90deg, rgba(255,209,102,.18), transparent)}
+
+    /* Tijdlijn */
+    .timeline{display:flex;flex-direction:column;gap:8px}
+    .t-item{display:flex;gap:10px;align-items:center;border:1px solid #22314f;background:#0e1628;border-radius:12px;padding:8px 10px}
+    .t-time{width:70px;font-variant-numeric:tabular-nums;color:#cfe0ff}
+    .t-body{flex:1}
+    .t-name{font-weight:600}
+    .t-note{color:#9fb0d0;font-size:.9rem}
+    .t-status{font-size:1.1rem}
+
+    /* Inventory two-column grid */
+    .inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:1100px){ .inv-grid{grid-template-columns:1fr} }
+  
+    /* Prep mode calendar selection */
+    
+  
+    /* Collapsible prep card tweaks */
+    #prep-card summary::-webkit-details-marker{display:none}
+    #prep-card summary{user-select:none}
+
+  
+    /* Hapjes breakdown styling */
+    .hap-group{margin:8px 0 12px; padding:8px 10px; border:1px solid #22314f; border-radius:10px; background:#0e1628}
+    .hap-title{font-weight:600; color:#dbe8ff; margin-bottom:6px}
+    .hap-items{margin:0; padding-left:18px}
+    .hap-items li{margin:2px 0}
+
+
+    /* Error banner */
+    #error-banner {display:none; background:#2a0f15; color:#ffdada; padding:10px; margin:10px 0; border:1px solid #4e1e27; border-radius:8px; white-space:pre-wrap;}
+
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="dot"></div><h1>Catering & Voorraad Planner</h1></div>
+  <div class="toolbar">
+    <label class="pill">Export JSON <button id="btn-export" class="btn">⬇</button></label>
+    <label class="pill">Import JSON <input type="file" id="btn-import" accept="application/json"></label>
+    <button id="btn-reset" class="btn">Reset</button>
+  </div>
+</header>
+
+<div id="error-banner"></div>
+<div class="wrap">
+  <!-- BOVENSTE RIJ: LINKS DAGOVERZICHT — RECHTS DETAILS + KALENDER -->
+  <div class="topgrid">
+    <!-- Linkerhelft: Dagoverzicht (gekoppeld aan geselecteerde dag) -->
+    <section class="card" id="dash-day">
+      <div class="toolbar" style="justify-content:space-between">
+        <h2>Dagoverzicht — <span id="selected-label"></span></h2>
+        <div class="toolbar">
+          <div class="pill">Formules: <b id="sum-entries">0</b></div>
+          <div class="pill">Personen: <b id="sum-persons">0</b></div>
+          <div class="pill" id="sum-flutes">Flutjes: 0/300</div>
+          <div class="pill" id="sum-wine">Wijnglazen: 0/80</div>
+          <div class="pill" id="sum-beer">Bierglazen: 0/216</div>
+          <div class="pill" id="sum-plates">Kleine bordjes: 0/24</div>
+          <div class="pill" id="sum-low">Lage glazen: 0/24</div>
+          <button class="btn" id="btn-goto-inventory">Ga naar voorraad ↓</button>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <h3>Tijdlijn</h3>
+          <div id="timeline" class="timeline"></div>
+        </div>
+        <div>
+          <h3>Benodigdheden (totaal voor geselecteerde dag)</h3>
+          <div id="hapjes-summary" class="subtle" style="margin:.5rem 0 .6rem"></div>
+          <table>
+            <thead><tr><th>Artikel</th><th>Benodigd</th><th>Eenheid</th><th>Voorraad/Cap.</th><th>Opmerking</th></tr></thead>
+            <tbody id="needs-selected"></tbody>
+          </table>
+
+          <h3>Hapjes (per soort — geselecteerde dag)</h3>
+          <div id="hapjes-breakdown" class="subtle"></div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Rechterhelft: boven Dagdetails, onder Kalender -->
+    <div class="sidegrid">
+      <section class="card" id="detail">
+        <h2>Dagdetails & planningen</h2>
+        <form id="add-plan-form" class="toolbar">
+          <label class="pill">Datum <input type="date" id="plan-date" required></label>
+          <select id="plan-time" aria-label="Serveertijd" required></select>
+          <select id="formula" required></select>
+          <input type="number" id="persons" min="1" step="1" placeholder="Personen" required>
+          <input id="notes" placeholder="Notitie (boot/tour/klant)">
+          <button class="btn" type="submit">Toevoegen</button>
+        </form>
+
+        <h3>Ingeplande formules</h3>
+        <table>
+          <thead><tr><th>Tijd</th><th>Formule</th><th>Pers.</th><th>Notitie</th><th></th></tr></thead>
+          <tbody id="entries-body"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Kalender (overzicht)</h2>
+        <div class="cal-wrap">
+          <button type="button" id="cal-prev" class="cal-btn">◀</button>
+          <div id="cal-label" style="min-width:180px"></div>
+          <button type="button" id="cal-next" class="cal-btn">▶</button>
+          <button type="button" id="cal-today" class="cal-btn">Vandaag</button>
+          <div class="cal-legend">heat = drukte · badge: 🔴 tekort · 🟡 bijna · ⚪ oké</div>
+        </div>
+        <div class="cal-head-row">
+          <div class="cal-head">Ma</div><div class="cal-head">Di</div><div class="cal-head">Wo</div>
+          <div class="cal-head">Do</div><div class="cal-head">Vr</div><div class="cal-head">Za</div><div class="cal-head">Zo</div>
+        </div>
+        <div id="cal-grid" class="cal-grid"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- VOORBEREIDINGSMODUS (permanent vak) -->
+  
+  <!-- VOORBEREIDINGSMODUS (collapsible) -->
+  <section class="card" id="prep-card" style="margin-top:16px">
+    <details id="prep-details">
+      <summary style="list-style:none; cursor:pointer">
+        <h2 style="display:inline">Voorbereidingsmodus — <span id="prep-range-label"></span></h2>
+        <span class="badge" style="margin-left:8px">open/close</span>
+      </summary>
+      <div class="toolbar" style="justify-content:space-between; align-items:center; margin-top:8px">
+        <div class="toolbar">
+          <label class="pill">Van <input type="date" id="prep-start"></label>
+          <label class="pill">Tot <input type="date" id="prep-end"></label>
+          <button class="btn" id="prep-apply">Toon overzicht</button>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px; margin-top:8px">
+        <div>
+          <h3>Drank (totaal over selectie)</h3>
+          <table><thead><tr><th>Artikel</th><th class="num">Totaal</th><th>Eenheid</th></tr></thead><tbody id="prep-drinks"></tbody></table>
+        </div>
+        <div>
+          <h3>Hapjes (aantal planken)</h3>
+          <table><thead><tr><th>Type</th><th class="num">Planken</th></tr></thead><tbody id="prep-hapjes"></tbody></table>
+        </div>
+      </div>
+    </details>
+  </section>
+
+
+  <!-- ONDERSTE RIJ: VOORRAAD LINKS — BOODSCHAPPEN RECHTS -->
+  <div class="bottomgrid" style="margin-top:16px">
+    <section class="card" id="inventory-section">
+      <div class="toolbar" style="justify-content:space-between; margin-bottom:8px">
+        <button class="btn" id="btn-goto-day">Ga naar dagoverzicht ↑</button>
+      </div>
+      <h2>Voorraadbeheer</h2>
+      <p class="subtle">Stock bijwerken. Drempels zijn vastgelegd in de code. (0 = op‑aanvraag)</p>
+
+      <div class="inv-grid">
+        <table>
+          <thead>
+            <tr><th>Artikel</th><th>Stock</th><th>Eenheid</th><th>Acties</th></tr>
+          </thead>
+          <tbody id="inv-body-a"></tbody>
+        </table>
+        <table>
+          <thead>
+            <tr><th>Artikel</th><th>Stock</th><th>Eenheid</th><th>Acties</th></tr>
+          </thead>
+          <tbody id="inv-body-b"></tbody>
+        </table>
+      </div>
+
+      <h3>Nieuw artikel</h3>
+      <form id="add-item-form" class="toolbar">
+        <input id="new-name" placeholder="Naam" required>
+        <input id="new-unit" placeholder="Eenheid (st, l, kg, g, fles, …)">
+        <input id="new-stock" type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="Stock">
+        <button class="btn" type="submit">Toevoegen</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Boodschappenlijstje</h2>
+      <p class="subtle">We tonen ook de harde deadline: <b>⏳ op tegen DD‑MM‑YYYY</b>.</p>
+      <div style="display:flex; gap:24px; flex-wrap:wrap">
+        <div style="flex:1; min-width:260px">
+          <h3>Nu onder grens</h3>
+          <ul id="shop-now"></ul>
+        </div>
+        <div style="flex:1; min-width:260px">
+          <h3>Binnenkort onder grens</h3>
+          <ul id="shop-soon"></ul>
+        </div>
+      </div>
+      <div id="shop-empty" class="empty">Nog niets op het lijstje. 🍀</div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Formules beheren</h2>
+    <p class="subtle">De formules staan in de broncode (CONFIG.formulas). Wil je ze live bekijken en kopiëren? Klik hieronder.</p>
+    <details>
+      <summary>Toon formule‑JSON</summary>
+      <pre id="formula-json" style="white-space:pre-wrap;background:#0e1628;padding:10px;border-radius:10px;border:1px solid #22314f;overflow:auto"></pre>
+    </details>
+    <p class="subtle">👉 Bubbels: 1 fles = 6 glazen. Alle bubbelformules tellen 1 flutje p.p. (herbruikbaar). Tijdselectie via kwartier-dropdown. Fruitsap: 1 kannetje/8p, we tonen <i>kannetjes</i> en boeken <i>dozen</i> af (↑ afronden).</p>
+  </section>
+</div>
+
+<footer>
+  Werkt volledig offline. Je data blijft lokaal in deze browser opgeslagen. — v3.2
+</footer>
+
+<script>
+  /* -----------------------------------------------
+   * CATERING & VOORRAAD PLANNER — v3.2
+   * - Royal-formules: ook "Kleine bordjes" en "Lage glazen" (1/8p) toegevoegd
+   * - Dagoverzicht: extra counters voor Kleine bordjes en Lage glazen
+   * - Voorraadbeheer: in twee kolommen naast elkaar (responsief)
+   * ----------------------------------------------- */
+
+  const APP_KEY = 'catering_planner';
+  const OLD_KEYS = ['catering_planner_v31','catering_planner_v30','catering_planner_v29'];
+
+  // Display-only sleutel voor fruitsap-kannetjes
+  const FRUIT_KAN_KEY = 'Fruitsap (kannetje)';
+  const FRUIT_BOX_NAME = 'Fruitsap';
+  const BOX_PER_KAN = 0.5; // 1 kan = 1/2 doos
+
+  // === Hard-coded drempels (naam → grens). 0 = op-aanvraag ===
+  const THRESHOLDS = {
+    'Cava': 60,
+    'Cava 0.0': 12,
+    'Champagne': 30,
+    'Prosecco': 50,
+    'Fruitsap': 16,
+    'Rode wijn': 12,
+    'Witte wijn': 12,
+    'Plat water SPA 1L': 12,
+    'Spuitwater SPA 1L': 12,
+    'Gentse Strop': 96,
+    'Van Eyck': 96,
+    'Gouden Carolus': 96,
+    'Ramon N/A': 16,
+
+    'Feta': 1,
+    'Olijven': 1,
+    'Grissini Piccoli': 1,
+    'Hummus': 1,
+    'Zong. Tomaatjes': 1,
+
+    'Keizerkaas': 24,
+    'Bistroworst': 2,
+    'Gandaham': 0,
+    'Lookworst': 8,
+    'Tierenteyn': 4,
+
+    'Bugles': 0,
+    'Geitenkaas': 0,
+    'Appels': 0,
+
+    'Kaasstengels': 20,
+    'Paprikanootjes': 10,
+    'Zoute nootjes': 10,
+    'Pinda': 10,
+    'Borrelnootjes': 10,
+    'Cake': 6,
+    'Melk': 6,
+  };
+  const _norm = s => String(s || '').trim().toLowerCase();
+  const _THR = new Map(Object.entries(THRESHOLDS).map(([k,v]) => [_norm(k), Number(v) || 0]));
+  function getThreshold(name, fallback=0){ const n=_norm(name); return _THR.has(n)?_THR.get(n):Number(fallback||0); }
+
+  // Herbruikbare capaciteiten (worden niet afgeboekt)
+  const REUSABLE_CAP = {
+    'Flutjes': 300,
+    'Bierglazen': 216,
+    'Lage glazen': 24,
+    'Kleine bordjes': 24,
+    'Wijnglazen': 80,
+};
+  const FLUTES_CAPACITY = REUSABLE_CAP['Flutjes'] || 300;
+  const BEER_CAPACITY = REUSABLE_CAP['Bierglazen'] || 216;
+  const LOW_CAPACITY = REUSABLE_CAP['Lage glazen'] || 24;
+  const PLATE_CAPACITY = REUSABLE_CAP['Kleine bordjes'] || 24;
+  const isReusable = (name)=> Object.prototype.hasOwnProperty.call(REUSABLE_CAP, name);
+  const isDisplayOnly = (name)=> name===FRUIT_KAN_KEY; // niet afboeken/boodschappen, enkel tonen
+
+  // Eenheden die als "verpakking" tellen → afronden naar boven per dag
+  const PACK_UNITS = new Set(['doos','zakje','pakje','pak','verpakking','zak']);
+  const isPackUnit = (u)=> PACK_UNITS.has(_norm(u));
+
+  const defaultState = {
+    inventory: [
+      { id: id(), name: 'Cava', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Cava 0.0', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Champagne', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Prosecco', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Fruitsap', unit: 'doos', stock: 0 },
+      { id: id(), name: 'Rode wijn', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Witte wijn', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Plat water SPA 1L', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Spuitwater SPA 1L', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Gentse Strop', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Van Eyck', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Gouden Carolus', unit: 'fles', stock: 0 },
+      { id: id(), name: 'Ramon N/A', unit: 'blikje', stock: 0 },
+
+      { id: id(), name: 'Feta', unit: 'grote pot', stock: 0 },
+      { id: id(), name: 'Olijven', unit: 'verpakking', stock: 0 },
+      { id: id(), name: 'Grissini Piccoli', unit: 'pak', stock: 0 },
+      { id: id(), name: 'Hummus', unit: 'verpakking', stock: 0 },
+      { id: id(), name: 'Zong. Tomaatjes', unit: 'verpakking', stock: 0 },
+
+      { id: id(), name: 'Keizerkaas', unit: '1/2 schel', stock: 0 },
+      { id: id(), name: 'Bistroworst', unit: '1 worst', stock: 0 },
+      { id: id(), name: 'Gandaham', unit: 'gram', stock: 0 },
+      { id: id(), name: 'Lookworst', unit: '1 worst', stock: 0 },
+      { id: id(), name: 'Tierenteyn', unit: '1 pot', stock: 0 },
+
+      { id: id(), name: 'Bugles', unit: 'zak', stock: 0 },
+      { id: id(), name: 'Geitenkaas', unit: 'doos', stock: 0 },
+      { id: id(), name: 'Appels', unit: 'appel', stock: 0 },
+
+      { id: id(), name: 'Kaasstengels', unit: 'pakje', stock: 0 },
+      { id: id(), name: 'Paprikanootjes', unit: 'zakje', stock: 0 },
+      { id: id(), name: 'Zoute nootjes', unit: 'zakje', stock: 0 },
+      { id: id(), name: 'Pinda', unit: 'zakje', stock: 0 },
+      { id: id(), name: 'Borrelnootjes', unit: 'zakje', stock: 0 },
+      { id: id(), name: 'Cake', unit: 'st', stock: 0 },
+      { id: id(), name: 'Melk', unit: 'l', stock: 0 },
+    ],
+    plans: {},
+    consumed: {},
+    settings: {
+      prepWindows: { defaultMinutesBefore: 120 },
+      calendarCursor: firstOfMonthISO(new Date()),
+      selectedDate: null,
+      warnMarginPercent: 20,
+      shoppingHorizonDays: 14,
+    },
+    ui: { editing: null },
+  };
+
+  const CONFIG = {
+    formulas: {
+      // Bubbels (flutjes 1 p.p.) + fruitsap: 1 kan/8p (display) ⇒ dozen voor stock
+      cava:            { name: 'Cava (1 glas p.p.)',            serve:{minutesBefore:60}, rules:[
+        {type:'per_person',items:[{invName:'Cava',qty:(1/6),unit:'fles',ceilAtTotal:true}]},
+        {type:'per_person',items:[{invName:'Flutjes',qty:1,unit:'st'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY,qty:1,unit:'kan'}]},
+      ]},
+      royalCava:       { name: 'Royal Cava (2 glazen p.p.)',    serve:{minutesBefore:60}, rules:[
+        {type:'per_person',items:[{invName:'Cava',qty:(2/6),unit:'fles',ceilAtTotal:true}]},
+        {type:'per_person',items:[{invName:'Flutjes',qty:1,unit:'st'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY,qty:1,unit:'kan'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[
+          {invName:'Kleine bordjes',qty:1,unit:'st'},
+          {invName:'Lage glazen',qty:1,unit:'st'}
+        ]},
+        {type:'per_board',boardRatio:16,itemsPerBoard:[
+          {invName:'Zoute nootjes',qty:0.5,unit:'zakje'},
+          {invName:'Paprikanootjes',qty:0.5,unit:'zakje'},
+          {invName:'Kaasstengels',qty:0.5,unit:'pakje'},
+        ]}
+      ]},
+      prosecco:        { name: 'Prosecco (1 glas p.p.)',        serve:{minutesBefore:60}, rules:[
+        {type:'per_person',items:[{invName:'Prosecco',qty:(1/6),unit:'fles',ceilAtTotal:true}]},
+        {type:'per_person',items:[{invName:'Flutjes',qty:1,unit:'st'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY,qty:1,unit:'kan'}]},
+      ]},
+      royalProsecco:   { name: 'Royal Prosecco (2 glazen p.p.)',serve:{minutesBefore:60}, rules:[
+        {type:'per_person',items:[{invName:'Prosecco',qty:(2/6),unit:'fles',ceilAtTotal:true}]},
+        {type:'per_person',items:[{invName:'Flutjes',qty:1,unit:'st'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY,qty:1,unit:'kan'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[
+          {invName:'Kleine bordjes',qty:1,unit:'st'},
+          {invName:'Lage glazen',qty:1,unit:'st'}
+        ]},
+        {type:'per_board',boardRatio:16,itemsPerBoard:[
+          {invName:'Zoute nootjes',qty:0.5,unit:'zakje'},
+          {invName:'Paprikanootjes',qty:0.5,unit:'zakje'},
+          {invName:'Kaasstengels',qty:0.5,unit:'pakje'},
+        ]}
+      ]},
+      champagne:       { name: 'Champagne (1 glas p.p.)',       serve:{minutesBefore:60}, rules:[
+        {type:'per_person',items:[{invName:'Champagne',qty:(1/6),unit:'fles',ceilAtTotal:true}]},
+        {type:'per_person',items:[{invName:'Flutjes',qty:1,unit:'st'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY,qty:1,unit:'kan'}]},
+      ]},
+      royalChampagne:  { name: 'Royal Champagne (2 glazen p.p.)',serve:{minutesBefore:60},rules:[
+        {type:'per_person',items:[{invName:'Champagne',qty:(2/6),unit:'fles',ceilAtTotal:true}]},
+        {type:'per_person',items:[{invName:'Flutjes',qty:1,unit:'st'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY,qty:1,unit:'kan'}]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[
+          {invName:'Kleine bordjes',qty:1,unit:'st'},
+          {invName:'Lage glazen',qty:1,unit:'st'}
+        ]},
+        {type:'per_board',boardRatio:16,itemsPerBoard:[
+          {invName:'Zoute nootjes',qty:0.5,unit:'zakje'},
+          {invName:'Paprikanootjes',qty:0.5,unit:'zakje'},
+          {invName:'Kaasstengels',qty:0.5,unit:'pakje'},
+        ]}
+      ]},
+      champagneDeluxe: { name: 'Champagne Deluxe', serve:{minutesBefore:60}, rules:[
+        { type: 'per_person', items:[
+          { invName:'Champagne', qty:(2/6), unit:'fles', ceilAtTotal:true },
+          { invName:'Kaasstengels', qty:0.2, unit:'pakje' },
+          { invName:'Keizerkaas',   qty:1,   unit:'1/2 schel' },
+        ]},
+        { type:'per_person', items:[{invName:'Flutjes',qty:1,unit:'st'}] },
+        { type:'per_board', boardRatio:8,  itemsPerBoard:[{invName:FRUIT_KAN_KEY,qty:1,unit:'kan'}] },
+        { type:'per_board', boardRatio:8,  itemsPerBoard:[{invName:'Kleine bordjes',qty:1,unit:'st'},{invName:'Lage glazen',qty:1,unit:'st'}] },
+        { type:'per_board', boardRatio:16, itemsPerBoard:[
+          {invName:'Zoute nootjes',qty:0.5,unit:'zakje'},
+          {invName:'Paprikanootjes',qty:0.5,unit:'zakje'},
+          {invName:'Kaasstengels',qty:0.5,unit:'pakje'},
+        ]},
+      ]},
+
+      // Koffie
+      koffie:      { name:'Koffie', serve:{minutesBefore:30}, rules:[{type:'per_person',items:[{invName:'Melk',qty:0.02,unit:'l'}]}]},
+      koffieCake:  { name:'Koffie + Cake', serve:{minutesBefore:45}, rules:[
+        {type:'per_person',items:[{invName:'Melk',qty:0.02,unit:'l'}]},
+        {type:'per_group', items:[{invName:'Cake',qty:1,unit:'st'}]},
+      ]},
+
+      // Hapjes
+      gentseHapjes: { name:'Gentse Hapjes', serve:{minutesBefore:60}, rules:[
+        { type:'per_board', boardRatio:6, itemsPerBoard:[
+          {invName:'Keizerkaas', qty:1, unit:'1/2 schel'},
+          {invName:'Gandaham', qty:35, unit:'gram'},
+          {invName:'Bistroworst', qty:0.5, unit:'1 worst'},
+          {invName:'Lookworst', qty:0.5, unit:'1 worst'},
+          {invName:'Tierenteyn', qty:0.2, unit:'1 pot'},
+        ]}
+      ]},
+      belgischeHapjes: { name:'Belgische Hapjes', serve:{minutesBefore:60}, rules:[
+        { type:'per_board', boardRatio:6, itemsPerBoard:[
+          {invName:'Keizerkaas', qty:2, unit:'1/2 schel'},
+          {invName:'Bistroworst', qty:0.25, unit:'1 worst'},
+          {invName:'Gandaham', qty:40, unit:'gram'},
+          {invName:'Kaasstengels', qty:0.25, unit:'pakje'},
+          {invName:'Tierenteyn', qty:0.02, unit:'1 pot'},
+        ]}
+      ]},
+      mediterraneHapjes: { name:'Mediterrane Hapjes', serve:{minutesBefore:60}, rules:[
+        { type:'per_board', boardRatio:6, itemsPerBoard:[
+          {invName:'Feta', qty:0.2, unit:'grote pot'},
+          {invName:'Olijven', qty:0.2, unit:'verpakking'},
+          {invName:'Hummus', qty:0.2, unit:'verpakking'},
+          {invName:'Zong. Tomaatjes', qty:0.1, unit:'verpakking'},
+          {invName:'Grissini Piccoli', qty:0.25, unit:'pak'},
+        ]}
+      ]},
+
+      // Bieren Plezieren (bierglazen zijn herbruikbaar)
+      bp1: { name:'Bieren Plezieren 1 (BP1)', serve:{minutesBefore:60}, rules:[
+        { type:'per_person', items:[
+          {invName:'Gentse Strop', qty:1, unit:'fles'},
+          {invName:'Bierglazen', qty:1, unit:'st'},
+        ]},
+        { type:'per_board', boardRatio:8, itemsPerBoard:[{invName:FRUIT_KAN_KEY, qty:1, unit:'kan'}] },
+      ]},
+      bp2: { name:'Bieren Plezieren Dubbel (BP2)', serve:{minutesBefore:60}, rules:[
+        { type:'per_person', items:[
+          {invName:'Gentse Strop', qty:1, unit:'fles'},
+          {invName:'Van Eyck', qty:1, unit:'fles'},
+          {invName:'Bierglazen', qty:2, unit:'st'},
+        ]},
+        { type:'per_board', boardRatio:8, itemsPerBoard:[{invName:FRUIT_KAN_KEY, qty:1, unit:'kan'}] },
+      ]},
+      bp3: { name:'Bieren Plezieren Degustatie (BP3)', serve:{minutesBefore:60}, rules:[
+        { type:'per_person', items:[
+          {invName:'Gentse Strop', qty:0.5, unit:'fles'},
+          {invName:'Van Eyck', qty:0.5, unit:'fles'},
+          {invName:'Gouden Carolus', qty:0.5, unit:'fles'},
+          {invName:'Bierglazen', qty:2, unit:'st'},
+        ]},
+        { type:'per_board', boardRatio:8, itemsPerBoard:[{invName:FRUIT_KAN_KEY, qty:1, unit:'kan'}] },
+      ]},
+
+      // Nootjes & Crackers (gebruikt: Zoute nootjes & Paprikanootjes)
+      nootjesCrackers: { name:'Nootjes & Crackers', serve:{minutesBefore:45}, rules:[
+        { type:'per_board', boardRatio:8, itemsPerBoard:[
+          {invName:'Kleine bordjes', qty:1, unit:'st'},
+          {invName:'Lage glazen', qty:1, unit:'st'},
+          {invName:'Kaasstengels', qty:0.5, unit:'pakje'},
+          {invName:'Zoute nootjes', qty:0.5, unit:'zakje'},
+          {invName:'Paprikanootjes', qty:0.5, unit:'zakje'},
+        ]}
+      ]},
+      // Lunchen In Stijl (LIS)
+      lisWit: { name:'LIS (wit)', serve:{minutesBefore:60}, rules:[
+        {type:'per_person',items:[
+          {invName:'Mini-sandwich Stadius', qty:4, unit:'st'},
+          {invName:'Witte wijn', qty:(1/6), unit:'fles', ceilAtTotal:true},
+          {invName:'Wijnglazen', qty:1, unit:'st'}
+        ]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY, qty:1, unit:'kan'}]},
+      ]},
+      lisRood: { name:'LIS (rood)', serve:{minutesBefore:60}, rules:[
+        {type:'per_person',items:[
+          {invName:'Mini-sandwich Stadius', qty:4, unit:'st'},
+          {invName:'Rode wijn', qty:(1/6), unit:'fles', ceilAtTotal:true},
+          {invName:'Wijnglazen', qty:1, unit:'st'}
+        ]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[{invName:FRUIT_KAN_KEY, qty:1, unit:'kan'}]},
+      ]},
+
+      // Broodje Op een Bootje (BOB)
+      bob: { name:'Broodje Op een Bootje (BOB)', serve:{minutesBefore:45}, rules:[
+        {type:'per_person',items:[
+          {invName:'Belegde piccolo (Aula)', qty:2, unit:'st'},
+          {invName:'Appel', qty:1, unit:'st'},
+          {invName:'Reep chocolade', qty:1, unit:'st'},
+          {invName:'Bruine zak', qty:1, unit:'st'},
+          {invName:'Rietje', qty:1, unit:'st'}
+        ]},
+      ]},
+
+      // Mini-ontbijt
+      miniOntbijt: { name:'Mini-ontbijt', serve:{minutesBefore:45}, rules:[
+        {type:'per_person',items:[
+          {invName:'Koffie', qty:2, unit:'kop'},
+          {invName:'Koffiekoek', qty:2, unit:'st'},
+          {invName:'Flutjes', qty:1, unit:'st'},
+          {invName:'Koffietas', qty:1, unit:'st'},
+          {invName:'Onderbordje', qty:1, unit:'st'},
+          {invName:'Lepel', qty:1, unit:'st'}
+        ]},
+        {type:'per_board',boardRatio:8,itemsPerBoard:[
+          {invName:FRUIT_KAN_KEY, qty:1, unit:'kan'},
+          {invName:'Thermos koffie', qty:1, unit:'st'},
+          {invName:'Lage glazen', qty:1, unit:'st'},
+          {invName:'Kannetje voor melk', qty:1, unit:'st'}
+        ]},
+        {type:'per_group',items:[
+          {invName:'Thermos warm water', qty:1, unit:'st'},
+          {invName:'Theezakjes', qty:1, unit:'set'},
+          {invName:'Melk', qty:1, unit:'doos'},
+          {invName:'Groot wit bord', qty:1, unit:'st'}
+        ]},
+      ]},
+
+    }
+  };
+
+  // ---------- helpers ----------
+  function id(){ return Math.random().toString(36).slice(2,10); }
+  function toISODateLocal(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+  function parseISODateLocal(s){ if(!s) return new Date(); const [y,m,d]=s.split('-').map(Number); return new Date(y,(m||1)-1,d||1); }
+  function todayISO(){ return toISODateLocal(new Date()); }
+  function firstOfMonthISO(d){ const x=new Date(d.getFullYear(), d.getMonth(), 1); return toISODateLocal(x); }
+  const fmtBE = (d)=>{ const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); return `${dd}-${mm}-${yyyy}`; };
+  const fmtBEiso = (iso)=> fmtBE(parseISODateLocal(iso));
+
+  function el(q){ return document.querySelector(q); }
+  function deepMerge(base, patch){ if (Array.isArray(base) || Array.isArray(patch)) return patch ?? base; if (typeof base==='object' && base && typeof patch==='object' && patch){ for (const k of Object.keys(patch)) base[k] = deepMerge(base[k], patch[k]); return base; } return patch ?? base; }
+  function loadState(){ try{ let raw=localStorage.getItem(APP_KEY); if(!raw){ for(const k of OLD_KEYS){ raw=localStorage.getItem(k); if(raw) break; } } if(!raw) return structuredClone(defaultState); const parsed=JSON.parse(raw); const merged=deepMerge(structuredClone(defaultState), parsed); localStorage.setItem(APP_KEY, JSON.stringify(merged)); return merged; }catch(e){ return structuredClone(defaultState); } }
+  function saveState(){ localStorage.setItem(APP_KEY, JSON.stringify(state)); }
+
+  // Compacte hoeveelheid-notatie (Belgische komma, max 2 decimals, geen nodeloze nullen)
+  function formatQty(x){
+    const abs=(n)=>Math.abs(n);
+    if (Number.isNaN(x) || !isFinite(x)) return '0';
+    if (abs(x - Math.round(x)) < 1e-9) return String(Math.round(x)).replace('.', ',');
+    const r = Math.round(x * 100) / 100;
+    if (abs(r - Math.round(r)) < 1e-9) return String(Math.round(r)).replace('.', ',');
+    return String(r).replace('.', ',');
+  }
+  // Rond naar boven, behalve als het al (numeriek) een geheel getal is
+  function safeCeil(x){
+    return (Math.abs(x - Math.round(x)) < 1e-9) ? Math.round(x) : Math.ceil(x);
+  }
+
+  let state = loadState();
+
+  function getInventoryMap(){ const m=new Map(); state.inventory.forEach(i=>m.set(i.name,i)); return m; }
+  function upsertInventory(name, unit, stock){ const inv=state.inventory.find(i=>i.name===name); if(inv){ inv.unit=unit; inv.stock=stock; } else { state.inventory.push({ id:id(), name, unit, stock }); } saveState(); render(); }
+
+  // ---------- formulas engine ----------
+  function addNeed(map, invName, qty, unit, note, boards, ceilAtTotal){ if(!map.has(invName)) map.set(invName, { invName, qty:0, unit, note, boards:0, ceilAtTotal:false }); const e=map.get(invName); e.qty+=qty; e.unit=unit; if(note) e.note=note; if(boards) e.boards+=boards; e.ceilAtTotal = e.ceilAtTotal || !!ceilAtTotal; }
+  function computeNeeds(formulaKey, persons){ const f=CONFIG.formulas[formulaKey]; if(!f) return []; const needs=new Map(); for(const r of f.rules){ if(r.type==='per_person') r.items.forEach(it=>addNeed(needs,it.invName,it.qty*persons,it.unit,it.note,undefined,it.ceilAtTotal===true)); else if(r.type==='per_group') r.items.forEach(it=>addNeed(needs,it.invName,it.qty,it.unit,it.note,undefined,it.ceilAtTotal===true)); else if(r.type==='per_board'){ const boards=Math.ceil(persons/r.boardRatio); r.itemsPerBoard.forEach(it=>addNeed(needs,it.invName,it.qty*boards,it.unit,it.note,boards,it.ceilAtTotal===true)); } } const arr=Array.from(needs.values()); return arr; }
+
+  // ---------- planning ----------
+  function computeDayNeeds(date){
+    const entries=(state.plans[date]||[]).slice().sort((a,b)=> (a.time||'')<(b.time||'')?-1:1);
+    const needs=new Map();
+    for(const e of entries){ const list=computeNeeds(e.formulaKey, Number(e.persons||0)); list.forEach(n=>addNeed(needs,n.invName,n.qty,n.unit,n.note,n.boards,n.ceilAtTotal)); }
+    // Zet kannetjes → dozen (extra rij voor stock; display-rij blijft)
+    const arr=Array.from(needs.values());
+    const fruitKan = arr.find(n=>n.invName===FRUIT_KAN_KEY);
+    if (fruitKan){
+      const boxes = fruitKan.qty * BOX_PER_KAN; // niet afronden hier
+      addNeed(needs, FRUIT_BOX_NAME, boxes, 'doos', undefined, undefined, true);
+    }
+    const arr2=Array.from(needs.values());
+    // Éénmalig afronden op dagtotaal
+    arr2.forEach(n=>{ if(n.ceilAtTotal || isPackUnit(n.unit)) n.qty = safeCeil(n.qty); });
+    return { entries, needs: arr2 };
+  }
+
+  function addPlan(date,time,formulaKey,persons,notes=''){ const today=todayISO(); if(date<today){ alert('Deze datum ligt in het verleden en is vergrendeld.'); return; } const rt = roundToQuarter(time); const t = rt||''; if(!state.plans[date]) state.plans[date]=[]; state.plans[date].push({ id:id(), date,time:t,formulaKey,persons,notes }); if(date===today) autoConsumeReconcileDate(date); saveState(); render(); }
+  function removePlan(date,entryId){ const today=todayISO(); const isLocked=!!(state.consumed?.[date]?.locked); if(date<today||isLocked){ alert('Deze dag is vergrendeld.'); return; } if(!state.plans[date]) return; state.plans[date]=state.plans[date].filter(e=>e.id!==entryId); if(!state.plans[date].length) delete state.plans[date]; if(date===today) autoConsumeReconcileDate(date); saveState(); render(); }
+  function updatePlan(date,entryId,patch){ const today=todayISO(); const isLocked=!!(state.consumed?.[date]?.locked); if(date<today||isLocked){ alert('Deze dag is vergrendeld.'); return; } const list=state.plans[date]||[]; const idx=list.findIndex(e=>e.id===entryId); if(idx<0) return; const e=list[idx]; if(patch.time!==undefined) e.time = roundToQuarter(patch.time)||''; if(patch.formulaKey!==undefined) e.formulaKey=patch.formulaKey; if(patch.persons!==undefined) e.persons = Math.max(1, Math.round(Number(patch.persons||0))); if(patch.notes!==undefined) e.notes = patch.notes; if(date===today) autoConsumeReconcileDate(date); saveState(); render(); }
+
+  // Ronden naar dichtstbijzijnde 15 minuten (returns HH:MM)
+  function roundToQuarter(hhmm){ if(!hhmm) return ''; const [H,M]=hhmm.split(':').map(Number); let total=H*60+M; total=Math.round(total/15)*15; if(total>=24*60) total=23*60+45; const h=Math.floor(total/60), m=total%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
+
+  // auto-afboeken (vandaag differentieel) — Reusables & display-only worden NIET afgeboekt
+  function autoConsumeReconcileDate(date){
+    const { needs } = computeDayNeeds(date);
+    const needMap=new Map(); needs.forEach(n=>needMap.set(n.invName,n.qty));
+    if(!state.consumed) state.consumed={};
+    const prev=(state.consumed[date]?.items)||{};
+    const wasLocked=!!(state.consumed[date]?.locked);
+    if(date!==todayISO()&&wasLocked) return;
+    const invMap=getInventoryMap();
+    const all=new Set([...needMap.keys(), ...Object.keys(prev)]);
+    for(const name of all){
+      if(isReusable(name) || isDisplayOnly(name)) continue;
+      const needed=Number(needMap.get(name)||0), was=Number(prev[name]||0), delta=needed-was;
+      if(delta!==0){ let inv=invMap.get(name); if(!inv){ state.inventory.push({ id:id(), name, unit:'', stock:0 }); inv=state.inventory[state.inventory.length-1]; invMap.set(name,inv); }
+        inv.stock=Math.max(0,(inv.stock||0)-delta);
+      }
+    }
+    const itemsObj={};
+    for(const [k,v] of needMap.entries()) if(!isReusable(k) && !isDisplayOnly(k)) itemsObj[k]=v;
+    state.consumed[date]={ items:itemsObj, ts:Date.now(), locked:(date<todayISO()) };
+    saveState();
+  }
+
+  // catch-up verleden (stil + lock)
+  function autoCatchUpPast(){
+    const today=todayISO(); if(!state.consumed) state.consumed={};
+    const dates=Object.keys(state.plans).sort();
+    const invMap=getInventoryMap();
+    for(const d of dates){ if(d>=today) continue; const c=state.consumed[d]; if(c && c.locked){ continue; } if(c && !c.locked){ state.consumed[d].locked=true; continue; }
+      const { needs } = computeDayNeeds(d);
+      for(const n of needs){ if(isReusable(n.invName) || isDisplayOnly(n.invName)) continue; let inv=invMap.get(n.invName); if(!inv){ state.inventory.push({ id:id(), name:n.invName, unit:n.unit||'', stock:0 }); inv=state.inventory[state.inventory.length-1]; invMap.set(n.invName,inv); } inv.stock=Math.max(0,(inv.stock||0)-n.qty); }
+      const itemsObj={}; needs.filter(n=>!isReusable(n.invName) && !isDisplayOnly(n.invName)).forEach(n=>itemsObj[n.invName]=n.qty);
+      state.consumed[d]={ items:itemsObj, ts:Date.now(), locked:true };
+    }
+    saveState();
+  }
+
+  // ---------- projecties & deadlines ----------
+  function computeShoppingList(){
+    const todayDate=parseISODateLocal(todayISO());
+    const todayStr=toISODateLocal(todayDate);
+    const horizon=state.settings.shoppingHorizonDays??14;
+    const horizonISO=toISODateLocal(new Date(todayDate.getFullYear(),todayDate.getMonth(),todayDate.getDate()+horizon));
+    const itemsNow=[], itemsSoon=[];
+    const dates=Object.keys(state.plans).sort();
+    const cache=new Map();
+    function needsFor(d){ if(!cache.has(d)) cache.set(d, computeDayNeeds(d).needs); return cache.get(d); }
+
+    function project(itemName, stock0, thr){ let running=stock0; let firstRed=null; let outDate=null; const ordered=[todayStr, ...dates.filter(d=>d>todayStr)]; for(const d of ordered){ const need=(needsFor(d).find(n=>n.invName===itemName)?.qty)||0; running-=need; if(thr>0){ if(firstRed===null && running<=thr) firstRed=d; if(outDate===null && running<=0) outDate=d; } else { if(firstRed===null && running<0) firstRed=d; if(outDate===null && running<0) outDate=d; } if(firstRed && outDate) break; } return { firstRed, outDate }; }
+
+    const todayNeeds=needsFor(todayStr);
+    for(const it of state.inventory){ const name=it.name, unit=it.unit, stock=it.stock??0; const thr=getThreshold(name,0); const { firstRed, outDate } = project(name, stock, thr); if(thr===0){ const needToday=(todayNeeds.find(n=>n.invName===name)?.qty)||0; if(needToday>stock){ itemsNow.push({name,unit,stock,threshold:thr,reason:'ondemand',firstRed:todayStr,outDate:outDate||todayStr}); continue; } if(firstRed && firstRed<=horizonISO){ itemsSoon.push({name,unit,stock,threshold:thr,reason:'ondemand',firstRed,outDate:outDate||firstRed}); } continue; } if(stock<=thr){ itemsNow.push({name,unit,stock,threshold:thr,reason:'threshold',firstRed:todayStr,outDate:outDate||todayStr}); } else if (firstRed && firstRed<=horizonISO){ itemsSoon.push({name,unit,stock,threshold:thr,reason:'threshold',firstRed,outDate:outDate||firstRed}); } }
+    return { itemsNow, itemsSoon };
+  }
+
+  // Projecteer startstock op een toekomstige datum (vanaf vandaag → exclusief doel)
+  function projectedStockAtDate(targetISO){
+    const today=todayISO(); const dates=Object.keys(state.plans).sort();
+    const run=new Map(); state.inventory.forEach(it=>run.set(it.name, it.stock||0));
+    for(const d of dates){ if(d>=today && d<targetISO){ const { needs } = computeDayNeeds(d); needs.forEach(n=>{ if(isReusable(n.invName) || isDisplayOnly(n.invName)) return; const cur=run.get(n.invName)||0; run.set(n.invName, cur - n.qty); }); } }
+    return run; // Map(name → qty)
+  }
+
+  // Kalender dagstatus (🔴 / 🟡 / ⚪)
+  function dayStatus(dateStr){
+    const today=todayISO(); const dates=Object.keys(state.plans).sort(); const seq=[today, ...dates.filter(d=>d>today && d<=dateStr)];
+    const run=new Map(); state.inventory.forEach(it=>run.set(it.name, it.stock||0));
+    let hasRed=false, hasYellow=false;
+    for(const d of seq){ const { needs } = computeDayNeeds(d); for(const n of needs){ if(isReusable(n.invName) || isDisplayOnly(n.invName)) continue; const thr=getThreshold(n.invName,0); const cur=run.get(n.invName)||0; const after=cur - n.qty; run.set(n.invName, after); if(thr===0){ if(after<0) hasRed=true; } else { if(after<0) hasRed=true; else if(after<=thr) hasYellow=true; } } }
+    return hasRed?'red':(hasYellow?'yellow':'ok');
+  }
+
+  // Reusable needs helpers
+  function reusableNeededForDate(dateISO, name){ const { needs } = computeDayNeeds(dateISO); const it=needs.find(n=>n.invName===name); return Math.ceil(it?.qty||0); }
+  const flutesNeededForDate = (d)=> reusableNeededForDate(d,'Flutjes');
+  const beerNeededForDate   = (d)=> reusableNeededForDate(d,'Bierglazen');
+  const platesNeededForDate = (d)=> reusableNeededForDate(d,'Kleine bordjes');
+  const lowglassesNeededForDate = (d)=> reusableNeededForDate(d,'Lage glazen');
+
+  // ---------- UI RENDER ----------
+  function render(){
+    if(!state.settings.selectedDate) state.settings.selectedDate = todayISO();
+
+    autoCatchUpPast();
+    autoConsumeReconcileDate(todayISO());
+
+    renderSelectedDayOverview();
+    renderCalendar();
+    renderPlanner();
+    renderShoppingList();
+    renderInventory();
+
+    renderPrepCard();
+
+    const pre=el('#formula-json'); if (pre) pre.textContent=JSON.stringify(CONFIG.formulas,null,2);
+    renderExportButtons();
+  }
+
+  function renderSelectedDayOverview(){
+    const sel = state.settings.selectedDate || todayISO();
+    el('#selected-label').textContent = fmtBEiso(sel);
+
+    const { entries, needs } = computeDayNeeds(sel);
+
+    // Hapjes samenvatting
+    renderHapjesSummaryForSelectedDay(sel);
+
+    // Samenvatting
+    el('#sum-entries').textContent = String(entries.length);
+    el('#sum-persons').textContent = String(entries.reduce((a,b)=>a+Number(b.persons||0),0));
+    const fl = flutesNeededForDate(sel); const flPill = el('#sum-flutes'); flPill.textContent = `Flutjes: ${fl}/${FLUTES_CAPACITY}`; flPill.classList.toggle('alert', fl>FLUTES_CAPACITY);
+    const be = beerNeededForDate(sel); const bePill = el('#sum-beer'); bePill.textContent = `Bierglazen: ${be}/${BEER_CAPACITY}`; bePill.classList.toggle('alert', be>BEER_CAPACITY);
+    const pl = platesNeededForDate(sel); const plPill = el('#sum-plates'); plPill.textContent = `Kleine bordjes: ${pl}/${PLATE_CAPACITY}`; plPill.classList.toggle('alert', pl>PLATE_CAPACITY);
+    const lo = lowglassesNeededForDate(sel); const loPill = el('#sum-low'); loPill.textContent = `Lage glazen: ${lo}/${LOW_CAPACITY}`; loPill.classList.toggle('alert', lo>LOW_CAPACITY);
+    const wi = reusableNeededForDate(sel,'Wijnglazen'); const wiPill = el('#sum-wine'); if(wiPill){ wiPill.textContent = `Wijnglazen: ${wi}/${REUSABLE_CAP['Wijnglazen']}`; wiPill.classList.toggle('alert', wi>REUSABLE_CAP['Wijnglazen']); }
+
+
+    // Tijdlijn met projectiestock per entry
+    const tRoot = el('#timeline'); tRoot.innerHTML='';
+    const invStart = (sel>todayISO()) ? projectedStockAtDate(sel) : (()=>{ const m=new Map(); state.inventory.forEach(it=>m.set(it.name, it.stock||0)); return m; })();
+
+    entries.forEach(e=>{
+      const f = CONFIG.formulas[e.formulaKey];
+      const raw = computeNeeds(e.formulaKey, Number(e.persons||0));
+      const list=[]; let kan=0;
+      raw.forEach(n=>{ if(n.invName===FRUIT_KAN_KEY){ kan+=n.qty; } else if(!isReusable(n.invName)) list.push(n); });
+      if(kan>0) list.push({invName:FRUIT_BOX_NAME, qty:safeCeil(kan*BOX_PER_KAN), unit:'doos'});
+
+      let worst='ok';
+      list.forEach(n=>{
+        const cur = invStart.get(n.invName)||0; const thr = getThreshold(n.invName,0); const after = cur - safeCeil(n.qty);
+        if (thr===0){ if (after<0) worst='low'; }
+        else { if (after<0) worst='low'; else if (after<=thr && worst!=='low') worst='near'; }
+      });
+      list.forEach(n=>{ const cur=invStart.get(n.invName)||0; invStart.set(n.invName, cur - safeCeil(n.qty)); });
+
+      const serveAt = e.time || '—'; const icon = worst==='low'?'🛑':(worst==='near'?'⚠️':'✅');
+      const div=document.createElement('div'); div.className='t-item';
+      div.innerHTML = `<div class=\"t-time\">${serveAt}</div>
+        <div class=\"t-body\"><div class=\"t-name\">${escapeHtml(f?.name||e.formulaKey)} — ${e.persons}p</div>
+        <div class=\"t-note\">${escapeHtml(e.notes||'')}</div></div>
+        <div class=\"t-status\">${icon}</div>`;
+      tRoot.appendChild(div);
+    });
+
+    // Benodigdheden tabel
+    const invMap = getInventoryMap();
+
+    // Notities per ingrediënt
+    const noteMap = new Map();
+    entries.forEach(e=>{
+      const note=(e.notes||'').trim(); if(!note) return;
+      const lst=computeNeeds(e.formulaKey, Number(e.persons||0));
+      lst.forEach(n=>{
+        const key=n.invName===FRUIT_KAN_KEY?FRUIT_KAN_KEY:n.invName;
+        if(!noteMap.has(key)) noteMap.set(key,new Set());
+        noteMap.get(key).add(note);
+      });
+    });
+
+    const nt = el('#needs-selected'); nt.innerHTML='';
+    needs.forEach(n=>{
+      if(n.invName===FRUIT_BOX_NAME) return; // stock-rij niet tonen
+      let have, thr, after, status='ok', nodigText=formatQty(n.qty), unitText=n.unit||'';
+      if (n.invName===FRUIT_KAN_KEY){
+        const boxes = safeCeil(n.qty * BOX_PER_KAN);
+        nodigText = `${formatQty(n.qty)}`; // enkel kannen tonen
+        unitText = 'kan';
+        have = invMap.get(FRUIT_BOX_NAME)?.stock || 0; // voorraad in dozen
+        thr = getThreshold(FRUIT_BOX_NAME,0);
+        after = have - boxes;
+        status = thr===0 ? (after<0?'low':'ok') : (after<0?'low':(after<=thr?'near':'ok'));
+      } else if (isReusable(n.invName)){
+        have = REUSABLE_CAP[n.invName]||0; after = have - n.qty; status = after<0?'low':'ok';
+      } else {
+        have = invMap.get(n.invName)?.stock || 0; thr = getThreshold(n.invName,0); after = have - n.qty;
+        status = thr===0 ? (after<0?'low':'ok') : (after<0?'low':(after<=thr?'near':'ok'));
+      }
+      const notes = Array.from(noteMap.get(n.invName)||[]).join(' · ');
+      const tr=document.createElement('tr'); tr.className=`row ${status}`; tr.innerHTML=`
+        <td>${escapeHtml(n.invName===FRUIT_KAN_KEY?FRUIT_BOX_NAME:n.invName)}</td>
+        <td class="num">${nodigText}</td>
+        <td>${escapeHtml(unitText)}</td>
+        <td class="num">${formatQty(have)}</td>
+        <td>${escapeHtml(notes)}</td>`;
+      nt.appendChild(tr);
+    });
+      // Hapjes breakdown lijst
+    renderHapjesBreakdownForSelectedDay(sel);
+}
+
+  function fillQuarterSelect(sel, value){ sel.innerHTML=''; for(let m=0;m<24*60;m+=15){ const h=Math.floor(m/60), mm=m%60; const v=`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; const o=document.createElement('option'); o.value=v; o.textContent=v; if(v===value) o.selected=true; sel.appendChild(o);} }
+  function fillFormulaSelect(sel, key){ sel.innerHTML=''; Object.entries(CONFIG.formulas).forEach(([k,f])=>{ const o=document.createElement('option'); o.value=k; o.textContent=f.name; if(k===key) o.selected=true; sel.appendChild(o); }); }
+
+  function renderPlanner(){
+    const selDate = state.settings.selectedDate || todayISO();
+    const planDateInput=el('#plan-date'); if(planDateInput) planDateInput.value = selDate;
+
+    // Plan-time dropdown: 15-minuten opties (eenmalig vullen)
+    const timeSel = el('#plan-time');
+    if (timeSel && timeSel.options.length === 0){
+      const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='— tijd —'; opt0.disabled=true; opt0.selected=true; timeSel.appendChild(opt0);
+      for (let m=0; m<24*60; m+=15){ const h=Math.floor(m/60), mm=m%60; const v=`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; const o=document.createElement('option'); o.value=v; o.textContent=v; timeSel.appendChild(o); }
+    }
+
+    const sel=el('#formula'); if(sel){ sel.innerHTML=''; Object.entries(CONFIG.formulas).forEach(([k,f])=>{ const o=document.createElement('option'); o.value=k; o.textContent=f.name; sel.appendChild(o); }); }
+
+    const addForm=el('#add-plan-form'); if(addForm) addForm.onsubmit=(ev)=>{ ev.preventDefault(); const date=el('#plan-date').value; const timeInput=el('#plan-time').value; const time=roundToQuarter(timeInput); const formulaKey=el('#formula').value; const persons=Number(el('#persons').value||0); const notes=el('#notes').value.trim(); if(!date||!formulaKey||!persons) return; addPlan(date,time,formulaKey,persons,notes); el('#notes').value=''; state.settings.selectedDate=date; saveState(); render(); };
+
+    const date=selDate; const { entries } = computeDayNeeds(date);
+
+    const et=el('#entries-body'); if(et){ et.innerHTML=''; entries.forEach(e=>{
+      const f=CONFIG.formulas[e.formulaKey];
+      const isPast=date<todayISO(); const locked=!!(state.consumed?.[date]?.locked);
+      const editing = state.ui?.editing && state.ui.editing.id===e.id && state.ui.editing.date===date;
+
+      const tr=document.createElement('tr');
+      if(!editing){
+        tr.innerHTML=`
+          <td>${e.time||'—'}</td>
+          <td>${escapeHtml(f?.name||e.formulaKey)}</td>
+          <td>${e.persons}</td>
+          <td>${escapeHtml(e.notes||'')}</td>
+          <td>${(isPast||locked)?'':`<button class="btn edit" data-id="${e.id}" data-date="${date}">Bewerk</button> <button class="btn danger" data-id="${e.id}" data-date="${date}">Verwijder</button>`}</td>`;
+      } else {
+        tr.innerHTML=`
+          <td><select class="edit-time" style="min-width:86px"></select></td>
+          <td><select class="edit-formula" style="min-width:220px"></select></td>
+          <td><input type="number" class="edit-persons" min="1" step="1" value="${e.persons}" style="width:80px"></td>
+          <td><input class="edit-notes" value="${escapeHtml(e.notes||'')}"/></td>
+          <td><button class="btn save" data-id="${e.id}" data-date="${date}">Opslaan</button> <button class="btn" data-act="cancel">Annuleren</button></td>`;
+        // vul selects
+        const ts=tr.querySelector('.edit-time'); fillQuarterSelect(ts, e.time||'00:00');
+        const fs=tr.querySelector('.edit-formula'); fillFormulaSelect(fs, e.formulaKey);
+        tr.querySelector('[data-act="cancel"]').onclick=()=>{ state.ui.editing=null; saveState(); renderPlanner(); };
+        tr.querySelector('.save').onclick=(ev)=>{
+          const id=ev.target.dataset.id; const dt=ev.target.dataset.date; const newTime=tr.querySelector('.edit-time').value; const newForm=tr.querySelector('.edit-formula').value; const newPers=tr.querySelector('.edit-persons').value; const newNotes=tr.querySelector('.edit-notes').value; state.ui.editing=null; saveState(); updatePlan(dt,id,{time:newTime,formulaKey:newForm,persons:newPers,notes:newNotes}); };
+      }
+      et.appendChild(tr);
+    });
+    et.querySelectorAll('button.edit').forEach(b=>b.addEventListener('click',ev=>{ state.ui.editing={ id:ev.target.dataset.id, date:ev.target.dataset.date }; saveState(); renderPlanner(); }));
+    et.querySelectorAll('button.danger').forEach(b=>b.addEventListener('click',ev=>removePlan(ev.target.dataset.date,ev.target.dataset.id)));
+    }
+  }
+
+  function renderCalendar(){
+    const label=el('#cal-label'); const grid=el('#cal-grid'); const cursorISO=state.settings.calendarCursor||firstOfMonthISO(new Date()); const cur=parseISODateLocal(cursorISO); if(label) label.textContent=cur.toLocaleDateString('nl-BE',{month:'long',year:'numeric'});
+    if(grid){ grid.innerHTML=''; const days=monthMatrix(cur); const totals=dayTotals(); const selected=state.settings.selectedDate||todayISO(); for(const d of days){ const t=totals.get(d.dateStr)||{entries:0,persons:0}; const level=heatLevel(t.persons); const st=dayStatus(d.dateStr); const badge = st==='red'?'🔴':(st==='yellow'?'🟡':'⚪'); const cell=document.createElement('div'); cell.className=`cal-day ${d.inMonth?'':'muted'} heat${level} ${d.dateStr===selected?'selected':''}`; cell.innerHTML=`<div class=\"cal-num\">${d.date.getDate()}</div><div class=\"cal-small\">${t.entries}× · ${t.persons}p</div><div class=\"cal-badge\" title=\"status\">${badge}</div>`; cell.title=`${fmtBE(d.date)} — ${t.entries} planningen, ${t.persons} personen`; cell.onclick=()=>{ state.settings.selectedDate=d.dateStr; const p=el('#plan-date'); if(p) p.value=d.dateStr; saveState(); renderSelectedDayOverview(); renderPlanner(); renderCalendar(); }; grid.appendChild(cell);} }
+    const prev=el('#cal-prev'), next=el('#cal-next'), todayBtn=el('#cal-today'); if(prev) prev.onclick=(ev)=>{ev?.preventDefault(); const x=new Date(cur.getFullYear(),cur.getMonth()-1,1); state.settings.calendarCursor=firstOfMonthISO(x); saveState(); renderCalendar();}; if(next) next.onclick=(ev)=>{ev?.preventDefault(); const x=new Date(cur.getFullYear(),cur.getMonth()+1,1); state.settings.calendarCursor=firstOfMonthISO(x); saveState(); renderCalendar();}; if(todayBtn) todayBtn.onclick=(ev)=>{ev?.preventDefault(); state.settings.calendarCursor=firstOfMonthISO(new Date()); state.settings.selectedDate=todayISO(); saveState(); render();};
+  }
+  function monthMatrix(cur){ const y=cur.getFullYear(), m=cur.getMonth(); const first=new Date(y,m,1); const js=(first.getDay()+6)%7; const start=new Date(y,m,1-js); const days=[]; for(let i=0;i<42;i++){ const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i); days.push({ date:d, dateStr:toISODateLocal(d), inMonth:d.getMonth()===m }); } return days; }
+  function dayTotals(){ const m=new Map(); for(const [date,list] of Object.entries(state.plans)){ const entries=list.length; const persons=list.reduce((a,b)=>a+Number(b.persons||0),0); m.set(date,{entries,persons}); } return m; }
+  function heatLevel(p){ if(!p) return 0; if(p<=12) return 1; if(p<=30) return 2; if(p<=60) return 3; return 4; }
+
+  function renderShoppingList(){ const { itemsNow, itemsSoon } = computeShoppingList(); const n=el('#shop-now'), s=el('#shop-soon'); if(n) n.innerHTML=''; if(s) s.innerHTML=''; const fmtD = (iso)=> iso?fmtBEiso(iso):'onbekend'; itemsNow.forEach(x=>{ const li=document.createElement('li'); const label=(x.reason==='ondemand')?'tekort vandaag':'onder grens nu'; li.textContent=`${x.name} — ${label} — ⏳ op tegen ${fmtD(x.outDate)}`; n.appendChild(li); }); itemsSoon.forEach(x=>{ const li=document.createElement('li'); const label=(x.reason==='ondemand')?'tekort vanaf':'onder grens vanaf'; li.textContent=`${x.name} — ${label} ${fmtD(x.firstRed)} — ⏳ op tegen ${fmtD(x.outDate)}`; s.appendChild(li); }); const empty=el('#shop-empty'); if(empty) empty.style.display=(itemsNow.length||itemsSoon.length)?'none':'block'; }
+
+  function renderInventory(){
+    const tbodyA=el('#inv-body-a'); const tbodyB=el('#inv-body-b'); if(!tbodyA||!tbodyB) return;
+    tbodyA.innerHTML=''; tbodyB.innerHTML='';
+    const nearFactor=1+(state.settings.warnMarginPercent||20)/100; const { itemsNow } = computeShoppingList(); const nowSet=new Set(itemsNow.map(x=>x.name));
+
+    const mid=Math.ceil(state.inventory.length/2);
+    const chunks=[ state.inventory.slice(0,mid), state.inventory.slice(mid) ];
+
+    chunks.forEach((arr, iCol)=>{
+      const tbody = iCol===0?tbodyA:tbodyB;
+      arr.forEach((it,idxLocal)=>{
+        const idx = (iCol===0?0:mid) + idxLocal; // index in volledige array
+        const thr=getThreshold(it.name,0); const near=thr*nearFactor; let status='ok'; if(thr>0) status=it.stock<=thr?'low':(it.stock<=near?'near':'ok'); else status=nowSet.has(it.name)?'low':'ok'; const icon=status==='low'?'🛒':(status==='near'?'⚠️':'✅');
+        const tr=document.createElement('tr'); tr.className=`row ${status}`; tr.innerHTML=`
+          <td>${icon} ${escapeHtml(it.name)}</td>
+          <td><input type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" value="${Math.round(it.stock||0)}" data-idx="${idx}" class="stock-input"></td>
+          <td>${escapeHtml(it.unit)}</td>
+          <td class="actions">
+            <button data-idx="${idx}" class="btn minus" aria-label="verminder 1">−</button>
+            <button data-idx="${idx}" class="btn plus"  aria-label="verhoog 1">＋</button>
+            <button data-idx="${idx}" class="btn del"   aria-label="verwijder">✕</button>
+          </td>`; tbody.appendChild(tr);
+      });
+    });
+
+    document.querySelectorAll('.stock-input').forEach(inp=>{ inp.addEventListener('input',e=>{ const v=Math.max(0,Math.round(Number(e.target.value||0))); e.target.value=String(v); }); inp.addEventListener('change',e=>{ const i=Number(e.target.dataset.idx); const v=Math.max(0,Math.round(Number(e.target.value||0))); state.inventory[i].stock=v; saveState(); render(); }); });
+    document.querySelectorAll('.btn.minus').forEach(btn=>btn.addEventListener('click',e=>{ const i=Number(e.target.dataset.idx); state.inventory[i].stock=Math.max(0,Math.round(state.inventory[i].stock)-1); saveState(); render(); }));
+    document.querySelectorAll('.btn.plus').forEach(btn=>btn.addEventListener('click',e=>{ const i=Number(e.target.dataset.idx); state.inventory[i].stock=Math.max(0,Math.round(state.inventory[i].stock)+1); saveState(); render(); }));
+    document.querySelectorAll('.btn.del').forEach(btn=>btn.addEventListener('click',e=>{ const i=Number(e.target.dataset.idx); if(!confirm(`Verwijder “${state.inventory[i].name}”?`)) return; state.inventory.splice(i,1); saveState(); render(); }));
+
+    const gotoInvBtn=el('#btn-goto-inventory'); if(gotoInvBtn) gotoInvBtn.onclick=()=>{ document.getElementById('inventory-section').scrollIntoView({behavior:'smooth'}); };
+    const gotoDayBtn=el('#btn-goto-day'); if(gotoDayBtn) gotoDayBtn.onclick=()=>{ document.getElementById('dash-day').scrollIntoView({behavior:'smooth'}); };
+
+    const form=el('#add-item-form'); if(form) form.onsubmit=(ev)=>{ ev.preventDefault(); const name=el('#new-name').value.trim(); const unit=el('#new-unit').value.trim()||'st'; const stock=Math.max(0,Math.round(Number(el('#new-stock').value||0))); if(!name) return; upsertInventory(name,unit,stock); ev.target.reset(); };
+  }
+
+  function renderExportButtons(){ const exp=el('#btn-export'), imp=el('#btn-import'), reset=el('#btn-reset'); if(exp) exp.onclick=()=>{ const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); const fname=`catering_planner_export_${dd}-${mm}-${yyyy}.json`; const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fname; a.click(); URL.revokeObjectURL(url); }; if(imp) imp.onchange=async(ev)=>{ const file=ev.target.files[0]; if(!file) return; const text=await file.text(); try{ const json=JSON.parse(text); state=deepMerge(structuredClone(defaultState), json); saveState(); render(); alert('Import geslaagd.'); }catch(e){ alert('Kon JSON niet lezen.'); } ev.target.value=''; }; if(reset) reset.onclick=()=>{ if(!confirm('Alle lokale data resetten naar standaard?')) return; state=structuredClone(defaultState); saveState(); render(); } }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>\"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])); }
+
+  
+  // ===== Voorbereidingsmodus helpers (multi-select via kalender) =====
+  function _ensurePrepState(){ state.ui = state.ui || {}; if(state.ui.prepMode===undefined) state.ui.prepMode=false; if(!Array.isArray(state.ui.prepSelected)) state.ui.prepSelected=[]; }
+  function isHapjesFormula(key){ const f=CONFIG.formulas[key]; return !!(f && /Hapjes/i.test(f.name)); }
+  function hapjesBoardsFor(formulaKey, persons){ const f=CONFIG.formulas[formulaKey]; if(!f) return 0; const r=(f.rules||[]).find(x=>x.type==='per_board' && typeof x.boardRatio==='number'); if(!r) return 0; return Math.ceil((Number(persons)||0)/r.boardRatio); }
+  function computeHapjesCountsForDate(date){ const entries=(state.plans[date]||[]); const map=new Map(); for(const e of entries){ if(isHapjesFormula(e.formulaKey)){ const boards=hapjesBoardsFor(e.formulaKey, e.persons); const name=CONFIG.formulas[e.formulaKey].name; map.set(name,(map.get(name)||0)+boards); } } return Array.from(map.entries()).map(([name,boards])=>({name,boards})); }
+  function drinkFilter(n){ const inv=String(n.invName||'').toLowerCase(); const reuse=['flutjes','bierglazen','kleine bordjes','lage glazen'].includes(inv); const unit=String(n.unit||'').toLowerCase(); const isDrinkUnit=['fles','blikje','kan','doos'].includes(unit); return isDrinkUnit && !reuse; }
+  function aggregateDrinksForDates(dates){ const totals=new Map(); for(const d of dates){ const {needs}=computeDayNeeds(d); needs.filter(drinkFilter).forEach(n=>{ const key=n.invName+'|'+(n.unit||''); const cur=totals.get(key)||{invName:n.invName,unit:n.unit,qty:0}; cur.qty += n.qty; totals.set(key,cur); }); } const arr=Array.from(totals.values()); arr.forEach(n=>{ if(isPackUnit(n.unit)) n.qty = safeCeil(n.qty); }); return arr.sort((a,b)=> a.invName.localeCompare(b.invName)); }
+  function aggregateHapjesForDates(dates){ const totals=new Map(); for(const d of dates){ for(const h of computeHapjesCountsForDate(d)){ totals.set(h.name,(totals.get(h.name)||0)+h.boards); } } return Array.from(totals.entries()).map(([name,boards])=>({name,boards})).sort((a,b)=>a.name.localeCompare(b.name)); }
+  function renderPrepOverviewInDash(){
+    _ensurePrepState();
+    const sec = document.getElementById('dash-day'); if(!sec) return;
+    const dates = state.ui.prepSelected;
+    const titleSel = dates.length ? dates.map(fmtBEiso).join(', ') : '— selecteer dagen op de kalender —';
+    const drinks = dates.length ? aggregateDrinksForDates(dates) : [];
+    const hapjes = dates.length ? aggregateHapjesForDates(dates) : [];
+    sec.innerHTML = `
+      <div class="toolbar" style="justify-content:space-between">
+        <h2>Voorbereiding — selectie (${dates.length} dag${dates.length===1?'':'en'})</h2>
+        <div class="subtle">Dagen: ${titleSel}</div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <h3>Drank (totaal)</h3>
+          <table><thead><tr><th>Artikel</th><th class="num">Totaal</th><th>Eenheid</th></tr></thead>
+            <tbody id="prep-drinks"></tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Hapjes (planken)</h3>
+          <table><thead><tr><th>Type</th><th class="num">Planken</th></tr></thead>
+            <tbody id="prep-hapjes"></tbody>
+          </table>
+        </div>
+      </div>`;
+    const dBody=document.getElementById('prep-drinks');
+    const hBody=document.getElementById('prep-hapjes');
+    if(dBody){ dBody.innerHTML=''; drinks.forEach(n=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${escapeHtml(n.invName)}</td><td class="num">${formatQty(n.qty)}</td><td>${escapeHtml(n.unit||'')}</td>`; dBody.appendChild(tr); }); }
+    if(hBody){ hBody.innerHTML=''; hapjes.forEach(h=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${escapeHtml(h.name)}</td><td class="num">${formatQty(h.boards)}</td>`; hBody.appendChild(tr); }); }
+  }
+
+  
+  // Prep mode toggle (header button) + clear selection when turning off
+  document.addEventListener('click', (ev)=>{
+    if(ev.target && ev.target.id==='btn-prep-mode'){
+      _ensurePrepState();
+      state.ui.prepMode = !state.ui.prepMode;
+      if(!state.ui.prepMode) state.ui.prepSelected = [];
+      saveState(); render();
+    }
+  });
+
+  
+  // === Helpers voor datumbereik & hapjes/drank aggregatie (permanente voorbereidingskaart) ===
+  function addDaysISO(iso, days){ const d=new Date(iso); d.setDate(d.getDate()+days); return toISODateLocal(d); }
+  function datesBetweenInclusive(a,b){ const res=[]; let d=new Date(a); const e=new Date(b); while(d<=e){ res.push(toISODateLocal(d)); d.setDate(d.getDate()+1);} return res; }
+  function isHapjesFormula(key){ const f=CONFIG.formulas[key]; return !!(f && /Hapjes/i.test(f.name)); }
+  function hapjesBoardsFor(formulaKey, persons){ const f=CONFIG.formulas[formulaKey]; if(!f) return 0; const r=(f.rules||[]).find(x=>x.type==='per_board' && typeof x.boardRatio==='number'); return r?Math.ceil((Number(persons)||0)/r.boardRatio):0; }
+  function computeHapjesCountsForDate(date){ const entries=(state.plans[date]||[]); const map=new Map(); for(const e of entries){ if(isHapjesFormula(e.formulaKey)){ const boards=hapjesBoardsFor(e.formulaKey, e.persons); const name=CONFIG.formulas[e.formulaKey].name; map.set(name,(map.get(name)||0)+boards); } } return Array.from(map.entries()).map(([name,boards])=>({name,boards})); }
+  function drinkFilter(n){ const nm=String(n.invName||'').toLowerCase(); const reuse=['flutjes','bierglazen','kleine bordjes','lage glazen'].includes(nm); const unit=String(n.unit||'').toLowerCase(); const isDrinkUnit=['fles','blikje','kan','doos'].includes(unit); return isDrinkUnit && !reuse; }
+  function aggregateDrinksForRange(start,end){ const totals=new Map(); for(const d of datesBetweenInclusive(start,end)){ const {needs}=computeDayNeeds(d); needs.filter(drinkFilter).forEach(n=>{ const key=n.invName+'|'+(n.unit||''); const cur=totals.get(key)||{invName:n.invName,unit:n.unit,qty:0}; cur.qty+=n.qty; totals.set(key,cur); }); } const arr=Array.from(totals.values()); arr.forEach(n=>{ if(isPackUnit(n.unit)) n.qty = safeCeil(n.qty); }); return arr.sort((a,b)=>a.invName.localeCompare(b.invName)); }
+  function aggregateHapjesForRange(start,end){ const totals=new Map(); for(const d of datesBetweenInclusive(start,end)){ for(const h of computeHapjesCountsForDate(d)){ totals.set(h.name,(totals.get(h.name)||0)+h.boards); } } return Array.from(totals.entries()).map(([name,boards])=>({name,boards})).sort((a,b)=>a.name.localeCompare(b.name)); }
+  function renderPrepCard(){ const sec=document.getElementById('prep-card'); if(!sec) return; const iS=document.getElementById('prep-start'); const iE=document.getElementById('prep-end'); const today=todayISO(); if(iS && !iS.value) iS.value=today; if(iE && !iE.value) iE.value=addDaysISO(today,3); const start=iS?iS.value:today; const end=iE?iE.value:start; const lab=document.getElementById('prep-range-label'); if(lab) lab.textContent = `${fmtBEiso(start)} — ${fmtBEiso(end)}`; const drinks=aggregateDrinksForRange(start,end); const hapjes=aggregateHapjesForRange(start,end); const dBody=document.getElementById('prep-drinks'); const hBody=document.getElementById('prep-hapjes'); if(dBody){ dBody.innerHTML=''; drinks.forEach(n=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(n.invName)}</td><td class="num">${formatQty(n.qty)}</td><td>${escapeHtml(n.unit||'')}</td>`; dBody.appendChild(tr); }); } if(hBody){ hBody.innerHTML=''; hapjes.forEach(h=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(h.name)}</td><td class="num">${formatQty(h.boards)}</td>`; hBody.appendChild(tr); }); } }
+
+  
+  // Voorbereidingskaart events
+  document.addEventListener('click', (ev)=>{
+    if(ev.target && ev.target.id==='prep-apply'){ ev.preventDefault(); renderPrepCard(); }
+  });
+  document.addEventListener('change', (ev)=>{
+    if(!ev.target) return;
+    if(ev.target.id==='prep-start' || ev.target.id==='prep-end'){ renderPrepCard(); }
+  });
+
+  
+  function renderHapjesSummaryForSelectedDay(sel){
+    const list = computeHapjesCountsForDate(sel);
+    const box = el('#hapjes-summary');
+    if(!box) return;
+    if(list.length===0){ box.textContent = 'Hapjes: geen planken.'; return; }
+    box.innerHTML = 'Hapjes: ' + list.map(h=>`${escapeHtml(h.name)}: <b>${h.boards}</b>`).join(' · ');
+  }
+
+  
+  // Prep details toggle: render label always; render tables only when open
+  document.addEventListener('toggle', (ev)=>{
+    if(ev.target && ev.target.id==='prep-details'){ renderPrepCard(); }
+  }, true);
+
+  
+  function renderHapjesBreakdownForSelectedDay(sel){
+    // Verzamel planken per hapjes-formule en reken ingrediënten uit
+    const entries = (state.plans[sel]||[]).filter(e=>isHapjesFormula(e.formulaKey));
+    const agg = new Map(); // key=formulaKey -> { name, boards, items: Map(name->{qty, unit}) }
+    entries.forEach(e=>{
+      const f = CONFIG.formulas[e.formulaKey]; if(!f) return;
+      const rule = (f.rules||[]).find(r=>r.type==='per_board' && typeof r.boardRatio==='number' && Array.isArray(r.itemsPerBoard));
+      if(!rule) return;
+      const boards = Math.ceil((Number(e.persons)||0)/rule.boardRatio);
+      if(!agg.has(e.formulaKey)) agg.set(e.formulaKey, { name: f.name, boards:0, items:new Map() });
+      const rec = agg.get(e.formulaKey); rec.boards += boards;
+      rule.itemsPerBoard.forEach(it=>{
+        const key = it.invName+'|'+(it.unit||'');
+        const cur = rec.items.get(key) || { invName: it.invName, unit: it.unit, qty:0 };
+        cur.qty += (Number(it.qty)||0) * boards;
+        rec.items.set(key, cur);
+      });
+    });
+    const root = document.getElementById('hapjes-breakdown'); if(!root) return;
+    if(agg.size===0){ root.innerHTML = '<div class="subtle">Geen hapjes op deze dag.</div>'; return; }
+    const parts=[];
+    agg.forEach(rec=>{
+      const items = Array.from(rec.items.values()).sort((a,b)=> a.invName.localeCompare(b.invName));
+      const lis = items.map(it=>`<li>${escapeHtml(it.invName)} — <b>${formatQty(it.qty)}</b> ${escapeHtml(it.unit||'')}</li>`).join('');
+      parts.push(`<div class="hap-group"><div class="hap-title"><b>${formatQty(rec.boards)}</b> ${escapeHtml(rec.name)}</div><ul class="hap-items">${lis}</ul></div>`);
+    });
+    root.innerHTML = parts.join('');
+  }
+
+  window.addEventListener('DOMContentLoaded', ()=>{ if(!state.settings.selectedDate) state.settings.selectedDate = todayISO(); render(); });
+
+  // Global error handler
+  window.onerror = function(msg, src, line, col, err){
+    var b=document.getElementById('error-banner'); if(!b) return;
+    b.style.display='block';
+    b.textContent='⚠️ Fout: '+msg+' @ '+line+':'+col;
+  };
+</script>
+</body>
+</html>
